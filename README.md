@@ -23,7 +23,7 @@ pip install pandas
 
 # collect_raw_data.py
 
-This script makes use of the `nba_api` to collect data for playoff seasons 2014-15 through 2024-25 using nba.com. By running the script as is, it provides the user with player stats, advanced player stats, team stats, and game logs that will later be processed for use later. 
+This script makes use of the `nba_api` to collect data for playoff seasons 2014-15 through 2024-25 using official stats from nba.com. By running the script as is, it provides the user with player stats, advanced player stats, team stats, and game logs that will later be processed for use later. 
 
 You can simply run the function,
 ```bash
