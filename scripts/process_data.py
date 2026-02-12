@@ -37,7 +37,7 @@ def main():
     1. Creates the "data/processed/" directory if it does not exist.
     2. Iterates through all CSV files in "data/raw/".
     3. Standardizes column names using `clean_column_names`.
-    5. Saves the cleaned dataset to "data/processed/" with a 
+    4. Saves the cleaned dataset to "data/processed/" with a 
        'clean_' prefix added to the filename.
 
     This script assumes raw data has already been collected
