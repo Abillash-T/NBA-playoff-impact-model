@@ -33,4 +33,4 @@ and you will see the output under data/raw.
 
 # process_data.py
 
-Assuming that `collect_raw_data.py` has been run, and as such the raw data files were created - this script creates the same CSV files but standardized to ensure consistency across datasets and prevents merge/key errors caused by inconsistent naming for future steps.
+Assuming that `collect_raw_data.py` has been run, and as such the raw data files were created, this script creates the same CSV files but standardized to ensure consistency across datasets and prevents merge/key errors caused by inconsistent naming for future steps.
