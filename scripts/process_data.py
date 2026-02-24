@@ -35,7 +35,7 @@ def clean_column_names(raw_path,processed_path):
                 df.columns
                 .str.lower()
                 .str.strip()
-                .str.replace(" ","_")
+                .str.replace(" ","_",regex=True)
             )
 
             processed_file_path = os.path.join(processed_path,filename)
@@ -46,7 +46,26 @@ def clean_column_names(raw_path,processed_path):
     return processed_files
 
 def merge_player_stats(box_stats, advanced_stats):
-    pass
+    """Merges Player per game and player advanced stats into one dataframe
+
+    Merges the box_stats and advanced_stats csv's using the player id, team id, and season as keys
+    to ensure no information is lost. Also keeps original files to ensure they can be used later.
+
+    Args: 
+        box_stats: file that includes player per game stats for the season
+        advanced_stats: file that includes the advnaced player stats for the season
+
+    Returns:
+        A merged dataframe
+    """
+    df = pd.merge(
+        box_stats,
+        advanced_stats,
+        on=["player_id","team_id","season"],
+        how="inner"
+    )
+
+    return df
 
 
 def main():
@@ -80,13 +99,14 @@ def main():
 
     files = clean_column_names(raw_path,processed_path)
 
-    merge_player_stats(files['player_per_game_playoffs_2015_2025.csv'],
-                       files['player_advanced_playoffs_2015_2025.csv'])
+    combine = merge_player_stats(files['player_per_game_playoffs_2015_2025.csv'], 
+                                 files['player_advanced_playoffs_2015_2025.csv'])
+    
 
-    # print(files['game_logs_2015_2025.csv'].head())
+    combine_path = os.path.join(processed_path,"Player_stats_2015_2025.csv")
 
-   
-
+    combine.to_csv(combine_path,index=False)
+    
 
 if __name__ == "__main__":
     main()
