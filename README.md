@@ -3,6 +3,7 @@ A statistical modeling project estimating player contributions to NBA playoff wi
 
 Project Structure:
 - collect_raw_data.py
+- process_data.py
 - README.md
 
 # Libraries
@@ -34,3 +35,7 @@ and you will see the output under data/raw.
 # process_data.py
 
 Assuming that `collect_raw_data.py` has been run, and as such the raw data files were created, this script creates the same CSV files but standardized to ensure consistency across datasets and prevents merge/key errors caused by inconsistent naming for future steps.
+
+It also merges the `player_per_game_playoffs_2015_2025.csv`, and `player_advanced_playoffs_2015_2025.csv`, as `Player_stats_2015_2025.csv` to allow future analysis. The original files remain unmodified as well. 
+
+
