@@ -104,7 +104,7 @@ def main():
                                  files['player_advanced_playoffs_2015_2025.csv'])
     
 
-    combine_path = os.path.join(processed_path,"Player_stats_2015_2025.csv")
+    combine_path = os.path.join(processed_path,"player_stats_2015_2025.csv")
 
     combine.to_csv(combine_path,index=False)
     
