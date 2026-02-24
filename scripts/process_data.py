@@ -58,10 +58,17 @@ def merge_player_stats(box_stats, advanced_stats):
     Returns:
         The merged dataframe
     """
+    merge_keys = ["player_id","team_id","season"]
+
+    advanced_stats = advanced_stats.loc[
+        :,~advanced_stats.columns.isin(box_stats.columns)
+        | advanced_stats.columns.isin(merge_keys)
+    ]
+
     df = pd.merge(
         box_stats,
         advanced_stats,
-        on=["player_id","team_id","season"],
+        on=merge_keys,
         how="inner"
     )
 
