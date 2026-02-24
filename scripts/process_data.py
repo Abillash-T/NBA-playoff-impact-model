@@ -56,7 +56,7 @@ def merge_player_stats(box_stats, advanced_stats):
         advanced_stats: file that includes the advnaced player stats for the season
 
     Returns:
-        A merged dataframe
+        The merged dataframe
     """
     df = pd.merge(
         box_stats,
@@ -77,8 +77,9 @@ def main():
     1. Creates the "data/processed/" directory if it does not exist.
     2. Iterates through all CSV files in "data/raw/".
     3. Standardizes column names using `clean_column_names`.
-    4. Saves the cleaned dataset to "data/processed/" with a 
-       'clean_' prefix added to the filename.
+    4. Saves the cleaned dataset to "data/processed/" 
+    5. It then merges the two player specific files together as a csv and saves it to 
+       "data/processed/"
 
     This script assumes raw data has already been collected
     using `data_collection.py`.
