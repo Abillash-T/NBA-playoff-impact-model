@@ -2,31 +2,52 @@ import pandas as pd
 import os 
 
 
-def clean_column_names(df):
-    """Standardizes column names in a DataFrame.
+def clean_column_names(raw_path,processed_path):
+    """Cleans and standardizes column names for all CSV files in a directory.
 
-    Converts all column names to lowercase, removes leading/trailing
-    whitespace, and replaces spaces with underscores. This ensures
-    consistency across datasets and prevents merge/key errors caused
-    by inconsistent naming.
+    Iterates through each CSV file in the specified raw data folder,
+    converts column names to lowercase, removes leading/trailing
+    whitespace, and replaces spaces with underscores. The cleaned
+    DataFrames are stored in a dictionary keyed by filename to allow
+    easy access in later stages of the pipeline.
 
     Args:
-        df: A pandas DataFrame whose columns need to be standardized.
+        raw_path: folder that includes base CSV files to be cleaned
+        processed_path: output directory after cleaning files.
 
     Returns:
-        A pandas DataFrame with cleaned column names.
+        A dictionary mapping each filename to its cleaned pandas DataFrame
 
     Raises:
         AttributeError: If the input is not a valid pandas DataFrame.
     """
-    df.columns = (
-        df.columns
-        .str.lower()
-        .str.strip()
-        .str.replace(" ","_")
-    )
+    os.makedirs(processed_path, exist_ok=True)
 
-    return df
+    processed_files={}
+
+    for filename in os.listdir(raw_path):
+        if filename.endswith(".csv"):
+            raw_file_path = os.path.join(raw_path,filename)
+
+            df = pd.read_csv(raw_file_path)
+
+            df.columns = (
+                df.columns
+                .str.lower()
+                .str.strip()
+                .str.replace(" ","_")
+            )
+
+            processed_file_path = os.path.join(processed_path,filename)
+            df.to_csv(processed_file_path,index=False)
+
+            processed_files[filename] = df
+    
+    return processed_files
+
+def merge_player_stats(box_stats, advanced_stats):
+    pass
+
 
 def main():
     """Main function to clean and standardize raw NBA datasets.
@@ -44,7 +65,6 @@ def main():
     using `data_collection.py`.
 
     Notes:
-        - Does not perform feature engineering or dataset merging.
         - Designed to be run independently of other pipeline stages.
         - Each dataset is processed independently for modularity.
 
@@ -58,20 +78,14 @@ def main():
     raw_path = "data/raw"
     processed_path = "data/processed"
 
-    os.makedirs(processed_path, exist_ok=True)
+    files = clean_column_names(raw_path,processed_path)
 
-    for filename in os.listdir(raw_path):
-        if filename.endswith(".csv"):
-            raw_file_path = os.path.join(raw_path, filename)
+    merge_player_stats(files['player_per_game_playoffs_2015_2025.csv'],
+                       files['player_advanced_playoffs_2015_2025.csv'])
 
-            df = pd.read_csv(raw_file_path)
+    # print(files['game_logs_2015_2025.csv'].head())
 
-            df = clean_column_names(df)
-
-            new_filename = f"clean_{filename}"
-            processed_file_path = os.path.join(processed_path, new_filename)
-
-            df.to_csv(processed_file_path, index=False)
+   
 
 
 if __name__ == "__main__":
