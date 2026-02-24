@@ -36,6 +36,9 @@ def main():
 
     files = remove_year(processed_path)
 
+    player_data = files['player_stats']
+    print(player_data.head())
+
 
 
 
