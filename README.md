@@ -4,6 +4,7 @@ A statistical modeling project estimating player contributions to NBA playoff wi
 Project Structure:
 - collect_raw_data.py
 - process_data.py
+- feature_engineering.py
 - README.md
 
 # Libraries
@@ -24,20 +25,36 @@ pip install pandas
 
 # collect_raw_data.py
 
-This script makes use of the `nba_api` to collect data for playoff seasons 2014-15 through 2024-25 using official stats from nba.com. By running the script as is, it provides the user with player stats, advanced player stats, team stats, and game logs that will later be processed for use later. 
+This script collects NBA playoff data (2015–16 through 2024–25) directly from the NBA Stats API using the `nba_api` package.
 
-You can simply run the function,
-```bash
-python scripts/collect_raw_data.py
-```
-and you will see the output under data/raw.
+It retrieves:
+- Player per-game playoff statistics
+- Player advanced playoff statistics
+- Team playoff statistics
+- Player game logs
+- All datasets are saved in the data/raw/ directory for downstream processing.
 
 # process_data.py
 
-Assuming that `collect_raw_data.py` has been run, and as such the raw data files were created, this script creates the same CSV files but standardized to ensure consistency across datasets and prevents merge/key errors caused by inconsistent naming for future steps.
+This script standardizes and prepares raw NBA playoff data for analysis.
 
-It also merges the `player_per_game_playoffs_2015_2025.csv`, and `player_advanced_playoffs_2015_2025.csv`, as `Player_stats_2015_2025.csv` to allow future analysis. The original files remain unmodified as well. 
+It performs the following steps:
+- Cleans and standardizes column names (lowercase, trimmed, underscores)
+- Saves cleaned datasets to data/processed
+- Merges player per-game stats with advanced stats into a single dataset
+- Preserves original files for reproducibility
 
 # feature_engineering.py
+
+This script creates the final modeling dataset from processed team playoff statistics (2015–2025).
+
+Features:
+- Creates a multiclass playoff outcome variable (playoff_stage)
+- Engineers interpretable team efficiency metrics
+- Removes redundant ranking columns
+- Exports a modeling-ready dataset and correlation matrix
+
+
+
 
 
