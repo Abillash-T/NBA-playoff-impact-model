@@ -5,6 +5,7 @@ Project Structure:
 - collect_raw_data.py
 - process_data.py
 - feature_engineering.py
+- modeling.py
 - README.md
 
 # Libraries
