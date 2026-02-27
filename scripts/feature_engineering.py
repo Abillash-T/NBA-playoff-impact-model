@@ -176,7 +176,7 @@ def main():
         "free_throw_rate",
         "rebound_rate",
        # "defensive_rebound_rate",
-       # "net_rating_proxy",
+        "net_rating_proxy",
         #"w_pct"
     ]
 

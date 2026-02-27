@@ -13,7 +13,7 @@ SEASONS = [
 
 
 def fetch_player_stats(seasons, per_mode='PerGame',season_type='Playoffs',measure_type='Base'):
-    '''Fetches NBA player statistics for the specified seasons.
+    """Fetches NBA player statistics for the specified seasons.
 
     Retrieves player statistics for either regular season or playoffs
     from the NBA Stats API using the LeagueDashPlayerStats endpoint.
@@ -31,7 +31,7 @@ def fetch_player_stats(seasons, per_mode='PerGame',season_type='Playoffs',measur
 
     Raises:
         Exception: If the NBA API request fails for a given season.
-    '''
+    """
     all_playoffs = []
 
     for season in seasons:
