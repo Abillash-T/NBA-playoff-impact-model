@@ -1,7 +1,6 @@
 # NBA-playoff-impact-model
 
-A season-aware machine learning project that predicts which NBA teams will reach the Conference Finals using engineered team efficiency metrics from 2015–16 through 2024–25.
-The model is trained on historical seasons and evaluated using leave-one-season-out validation to simulate real-world forecasting conditions.
+A season‑aware machine learning model that predicts which NBA teams are likely to reach the Conference Finals using engineered efficiency metrics from the 2015–16 through 2024–25 seasons.
 
 # Project Objective
 
@@ -77,15 +76,17 @@ Features:
 
 # modeling.py
 
-Trains and evaluates the predictive model using a random forest classifier.
+Trains and evaluates the predictive model using a season‑aware Random Forest classifier.
 
-Features:
+Key Features
 
-- Leave-One-Season-Out validation
-- Feature importance analysis
-- Forecasting simulation for the most recent season
-- Exports latest season predictions to data/results/
-
+- Leave‑One‑Season‑Out (LOSO) validation to simulate real forecasting conditions
+- Class‑balanced Random Forest to address playoff outcome imbalance
+- Predicts deep playoff run probability for each team in the most recent season
+- Outputs:
+  - Season‑level ROC‑AUC scores
+  - Feature importances
+  - Latest‑season predictions (data/results/latest_season_predictions.csv)
 
 
 # Future Improvements
