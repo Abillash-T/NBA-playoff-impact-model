@@ -38,10 +38,13 @@ def clean_column_names(raw_path,processed_path):
                 .str.replace(" ","_",regex=True)
             )
 
-            processed_file_path = os.path.join(processed_path,filename)
+            clean_name = filename.replace('_2015_2025','')
+
+            processed_file_path = os.path.join(processed_path,clean_name)
             df.to_csv(processed_file_path,index=False)
 
-            processed_files[filename] = df
+            clean_name = filename.replace('_2015_2025.csv', '')
+            processed_files[clean_name] = df
     
     return processed_files
 
@@ -75,6 +78,7 @@ def merge_player_stats(box_stats, advanced_stats):
     return df
 
 
+
 def main():
     """Main function to clean and standardize raw NBA datasets.
 
@@ -105,15 +109,20 @@ def main():
     raw_path = "data/raw"
     processed_path = "data/processed"
 
-    files = clean_column_names(raw_path,processed_path)
 
-    combine = merge_player_stats(files['player_per_game_playoffs_2015_2025.csv'], 
-                                 files['player_advanced_playoffs_2015_2025.csv'])
-    
+    files = clean_column_names(raw_path, processed_path) 
 
-    combine_path = os.path.join(processed_path,"player_stats_2015_2025.csv")
 
-    combine.to_csv(combine_path,index=False)
+    combine = merge_player_stats(
+        files['player_per_game_playoffs'],   # no year, no .csv
+        files['player_advanced_playoffs']
+    )
+
+    combine_path = os.path.join(processed_path, "player_stats.csv")
+    combine.to_csv(combine_path, index=False)
+
+    files['player_stats'] = combine  # add clean key before returning
+    return files    
     
 
 if __name__ == "__main__":

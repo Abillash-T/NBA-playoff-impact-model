@@ -1,33 +1,7 @@
 import pandas as pd
 import os
+from process_data import main as run_processing
 
-def remove_year(processed_path):
-    """Removes year + file extension from df name to make it easier to call 
-
-    Recursively goes through the processed_path file directory and remove the date suffix from the 
-    name and assigns them to a dictionary for easier calling later.
-
-    Args:
-        processed_path: folder containing processed files
-
-    Returns:
-        A dictionary mapping each filename to its cleaned pandas DataFrame
-    """
-    processed_files = {}
-
-    for filename in os.listdir(processed_path):
-        if filename.endswith(".csv"):
-
-            file_path = os.path.join(processed_path,filename)
-
-            df = pd.read_csv(file_path)
-
-            clean_name = filename.replace('_2015_2025.csv','')
-
-            
-            processed_files[clean_name] = df
-        
-    return processed_files
 
 def create_playoff_stage(df):
     """Creates multiclass playoff stage label based on playoff wins.
@@ -153,9 +127,9 @@ def main():
 
     os.makedirs(feature_path,exist_ok=True)
 
-    files = remove_year(processed_path)
+    files = run_processing()
 
-    team_data = files['team_stats']
+    team_data = files['playoff_team_stats']
 
 
     team_data = clean_columns(team_data)
@@ -175,7 +149,7 @@ def main():
         "three_point_rate",
         "free_throw_rate",
         "rebound_rate",
-       # "defensive_rebound_rate",
+        "defensive_rebound_rate",
         "net_rating_proxy",
         #"w_pct"
     ]
