@@ -19,7 +19,7 @@ A deep playoff run is defined as reaching:
 - Most recent season held out for forecasting simulation
 - Evaluation metric: ROC-AUC
   
-Mean Season-Based ROC-AUC: ~0.85
+Mean Season-Based ROC-AUC: ~0.79
 
 # Project Structure:
 - collect_raw_data.py
