@@ -38,13 +38,20 @@ def clean_column_names(raw_path,processed_path):
                 .str.replace(" ","_",regex=True)
             )
 
+            df = df.loc[:, ~df.columns.str.endswith("_rank")]
+
             clean_name = filename.replace('_2015_2025','')
 
             processed_file_path = os.path.join(processed_path,clean_name)
             df.to_csv(processed_file_path,index=False)
 
+
             clean_name = filename.replace('_2015_2025.csv', '')
+
+            
             processed_files[clean_name] = df
+
+            
     
     return processed_files
 

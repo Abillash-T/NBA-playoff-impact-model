@@ -2,6 +2,9 @@ import pandas as pd
 import os
 from process_data import main as run_processing
 
+def prefix_reg_columns(df):
+    rename_map = {col: f"reg_{col}" for col in df.columns if col not in {"team_id", "team_name", "season"}}
+    return df.rename(columns=rename_map)
 
 def create_playoff_stage(df):
     """Creates multiclass playoff stage label based on playoff wins.
@@ -54,8 +57,6 @@ def engineer_features(df):
     """
     df = df.copy()
 
-
-
     # EFFICENCY METRICS
     df["effective_field_goal_pct"] =(df["fgm"] + (0.5 * df["fg3m"]))/ df["fga"]
     df["turnover_ratio"] = (
@@ -79,20 +80,6 @@ def engineer_features(df):
 
     return df
 
-def clean_columns(df):
-    """Remove "_rank" from team stats as not relevant for analysis that will be performed later.
-
-    Finds all column names that end in "_rank", if they exist, they are removed from the df
-
-    Args:
-        df: dataframe input
-    
-    Returns:
-        df with columns removed
-    """
-    df = df.loc[:, ~df.columns.str.endswith("_rank")]
-
-    return df
 
 
 
@@ -122,25 +109,27 @@ def main():
         FileNotFoundError: If the raw data directory does not exist.
         Exception: If a CSV file cannot be read or written.
     """
-    processed_path = "data/processed"
     feature_path = "data/features"
 
     os.makedirs(feature_path,exist_ok=True)
 
     files = run_processing()
 
-    team_data = files['playoff_team_stats']
+    playoff_team_data = files['playoff_team_stats']
+    reg_team_data = files['regular_team_stats']
 
 
-    team_data = clean_columns(team_data)
-    team_data = create_playoff_stage(team_data)
-    team_data = engineer_features(team_data)
+    playoff_team_data = create_playoff_stage(playoff_team_data)
+    playoff_team_data = engineer_features(playoff_team_data)
+
+    reg_team_data = create_playoff_stage(reg_team_data)
+    reg_team_data = engineer_features(reg_team_data)
 
     selected_columns = [
         "team_id",
         "team_name",
         "season",
-        "playoff_stage",
+        
         "effective_field_goal_pct",
         "turnover_ratio",
         "offensive_rebound_rate",
@@ -153,21 +142,23 @@ def main():
         "net_rating_proxy",
         #"w_pct"
     ]
+    
 
-    numeric_cols = team_data[selected_columns].select_dtypes(include="number").columns
-    corr_matrix = team_data[numeric_cols].corr().round(2)
+    numeric_cols = playoff_team_data[selected_columns[:3] + ["playoff_stage"] + selected_columns[3:]].select_dtypes(include="number").columns
+    corr_matrix = playoff_team_data[numeric_cols].corr().round(2)
     corr_path = os.path.join(feature_path,"correlation.csv")
     corr_matrix.to_csv(corr_path,index=False)
-
-
         
 
-    team_model = team_data[selected_columns]
+    playoff_team_model = playoff_team_data[selected_columns[:3] + ["playoff_stage"] + selected_columns[3:]]
+    playoff_output_path = os.path.join(feature_path,"playoff_team_modeling_dataset.csv")
+    playoff_team_model.to_csv(playoff_output_path,index=False)
 
+    reg_team_model = reg_team_data[selected_columns]
+    reg_output_path = os.path.join(feature_path,"reg_team_modeling_dataset.csv")
+    reg_team_model.to_csv(reg_output_path,index=False)
 
-    output_path = os.path.join(feature_path,"team_modeling_dataset.csv")
-
-    team_model.to_csv(output_path,index=False)
+    reg_team_model = prefix_reg_columns(reg_team_model)
 
 
 
