@@ -17,9 +17,10 @@ A deep playoff run is defined as reaching:
 - Class weight balancing to address playoff class imbalance
 - Leave-One-Season-Out cross-validation
 - Most recent season held out for forecasting simulation
+- Current regular season stats for all 30 teams appended to training data to enrich predictions
 - Evaluation metric: ROC-AUC
   
-Mean Season-Based ROC-AUC: ~0.79
+Mean Season-Based ROC-AUC: ~0.81
 
 # Project Structure:
 - collect_raw_data.py
@@ -51,6 +52,7 @@ It retrieves:
 - Player per-game playoff statistics
 - Player advanced playoff statistics
 - Team playoff statistics
+- Team regular statistics
 - Player game logs
 - All datasets are saved in the data/raw/ directory for downstream processing.
 
@@ -60,6 +62,7 @@ This script standardizes and prepares raw NBA playoff data for analysis.
 
 It performs the following steps:
 - Cleans and standardizes column names (lowercase, trimmed, underscores)
+- Removes redundant ranking columns
 - Saves cleaned datasets to data/processed
 - Merges player per-game stats with advanced stats into a single dataset
 - Preserves original files for reproducibility
@@ -71,7 +74,6 @@ This script creates the final modeling dataset from processed team playoff stati
 Features:
 - Creates a multiclass playoff outcome variable (playoff_stage)
 - Engineers interpretable team efficiency metrics
-- Removes redundant ranking columns
 - Exports a modeling-ready dataset and correlation matrix
 
 # modeling.py
