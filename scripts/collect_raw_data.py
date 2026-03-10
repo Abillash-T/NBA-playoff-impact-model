@@ -5,6 +5,9 @@ import os
 from nba_api.stats.library.http import NBAStatsHTTP
 from requests import Session
 
+import random
+from requests.exceptions import ConnectionError
+
 # Create a custom session with browser-like headers
 custom_session = Session()
 custom_session.headers.update({
@@ -30,9 +33,7 @@ SEASONS = [
     '2020-21','2021-22','2022-23','2023-24','2024-25'
 ]
 
-import random
-import time
-from requests.exceptions import ConnectionError
+
 
 def safe_api_call(api_callable, max_retries=5):
     """
@@ -88,7 +89,8 @@ def fetch_player_stats(seasons, per_mode='PerGame',season_type='Playoffs',measur
 
     return player_stats
 
-def fetch_team_stats(seasons,per_mode='PerGame',season_type='Playoffs'):
+
+def fetch_team_stats(seasons,per_mode='PerGame',season_type='Playoffs',measure_type='Base'):
     """Fetches NBA team statistics for the specified seasons.
 
     Retrieves team statistics for either regular season or playoffs
@@ -112,7 +114,8 @@ def fetch_team_stats(seasons,per_mode='PerGame',season_type='Playoffs'):
         df = safe_api_call(lambda: LeagueDashTeamStats(
             season=season,
             season_type_all_star=season_type,
-            per_mode_detailed=per_mode
+            per_mode_detailed=per_mode,
+            measure_type_detailed_defense=measure_type
         ).get_data_frames()[0])
         df['SEASON'] = season
         all_playoffs.append(df)
@@ -156,6 +159,7 @@ def fetch_game_logs(seasons, player_or_team='P', season_type='Playoffs'):
 
     return log_stats
 
+
 def main():
     """Main function to fetch and save NBA playoff data.
 
@@ -179,25 +183,35 @@ def main():
     Raises:
         Exception: If any of the API requests fail or if CSV saving fails.
     """
-    player_pergame = fetch_player_stats(SEASONS,per_mode='PerGame')
-    player_pergame.to_csv("data/raw/player_per_game_playoffs_2015_2025.csv",index=False)
+    #playoff player stats
+    playoff_player_pergame = fetch_player_stats(SEASONS,per_mode='PerGame')
+    playoff_player_pergame.to_csv("data/raw/playoff_player_per_game_2015_2025.csv",index=False)
+    playoff_player_advanced = fetch_player_stats(SEASONS,measure_type='Advanced',per_mode='PerGame')
+    playoff_player_advanced.to_csv("data/raw/playoff_player_advanced_2015_2025.csv",index=False)
 
-    player_advanced = fetch_player_stats(SEASONS,measure_type='Advanced',per_mode='PerGame')
-    player_advanced.to_csv("data/raw/player_advanced_playoffs_2015_2025.csv",index=False)
+    #regular season player stats
+    reg_player_pergame = fetch_player_stats(SEASONS,per_mode='PerGame',season_type='Regular Season')
+    reg_player_pergame.to_csv("data/raw/regular_player_per_game_2015_2025.csv",index=False)
+    reg_player_advanced = fetch_player_stats(SEASONS,measure_type='Advanced',per_mode='PerGame',season_type='Regular Season')
+    reg_player_advanced.to_csv("data/raw/regular_player_advanced_2015_2025.csv",index=False)
 
+    #playoff team stats
     playoff_team_stats = fetch_team_stats(SEASONS)
     playoff_team_stats.to_csv("data/raw/playoff_team_stats_2015_2025.csv",index=False)
+    playoff_team_advanced = fetch_team_stats(SEASONS,measure_type='Advanced')
+    playoff_team_advanced.to_csv("data/raw/playoff_team_advanced_2015_2025.csv",index=False)
 
+    #regular season team stats
     regular_team_stats = fetch_team_stats(SEASONS,season_type="Regular Season")
     regular_team_stats.to_csv("data/raw/regular_team_stats_2015_2025.csv",index=False)
+    regular_team_advanced = fetch_team_stats(SEASONS,season_type="Regular Season",measure_type='Advanced')
+    regular_team_advanced.to_csv("data/raw/regular_team_advanced_2015_2025.csv",index=False)
 
 
     game_logs = fetch_game_logs(SEASONS,player_or_team='P')
     game_logs.to_csv("data/raw/game_logs_2015_2025.csv",index=False)
 
+
+
 if __name__ == "__main__":
     main()
-
-
-
-

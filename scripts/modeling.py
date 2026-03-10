@@ -37,14 +37,22 @@ def predict_latest_season(df):
     ).astype(int)
 
     team_features = [
-        "effective_field_goal_pct",
-        "turnover_ratio",
-        "offensive_rebound_rate",
-        "assist_turnover_ratio",
-        "free_throw_rate",
-        "net_rating_proxy"
-    ]
+    # API-provided
+    "efg_pct",
+    "ts_pct",
+    "off_rating",
+    "def_rating",
+    "pace",
+    "pie",
+    "oreb_pct",
+    "dreb_pct",
+    "tm_tov_pct",
+    "ast_to",
 
+    # Engineered
+    "three_point_rate",
+    "free_throw_rate",
+]
     latest_season = sorted(
         [s for s in df["season"].unique() if "-reg" not in s]
     )[-1]

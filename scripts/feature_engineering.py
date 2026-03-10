@@ -2,9 +2,6 @@ import pandas as pd
 import os
 from process_data import main as run_processing
 
-def prefix_reg_columns(df):
-    rename_map = {col: f"reg_{col}" for col in df.columns if col not in {"team_id", "team_name", "season"}}
-    return df.rename(columns=rename_map)
 
 def create_playoff_stage(df):
     """Creates multiclass playoff stage label based on playoff wins.
@@ -43,11 +40,11 @@ def create_playoff_stage(df):
 
     return df
 
-def engineer_features(df):
+def engineer_team_features(df):
     """Creates intereptable team-level features
 
-    creates new columns for more detailed stats that can be used to describe team performance
-    or compare and contrast with other teams.
+    creates new columns for extra stats that aren't already covered in the API to compare and 
+    contrast with other teams.
 
     Args:
         df: a dataframe consisting of team stats
@@ -57,31 +54,23 @@ def engineer_features(df):
     """
     df = df.copy()
 
-    # EFFICENCY METRICS
-    df["effective_field_goal_pct"] =(df["fgm"] + (0.5 * df["fg3m"]))/ df["fga"]
-    df["turnover_ratio"] = (
-        df["tov"] * 100) / (df["fga"] + (df["fta"] * 0.44) + df["ast"] + df["tov"])
-    df["offensive_rebound_rate"] = df["oreb"] / df["reb"] 
-
-    df["assist_turnover_ratio"] = df["ast"] / df["tov"]
-
-
     # SHOOTING PROFILE METRICS
     df["three_point_rate"] = df["fg3a"] / df["fga"]
     df["free_throw_rate"] = df["fta"] / df["fga"]
 
-    # TEAM CONTROL METRICS
-    df["rebound_rate"] = df["reb"] / df["min"]
-    df["defensive_rebound_rate"] = df["dreb"] / df["reb"]
-
-    # DEFFENSIVE
-    df["net_rating_proxy"] = df["plus_minus"]
-
 
     return df
 
+def engineer_player_features(df):
+    """
+    """
+    df = df.copy
+
+    
 
 
+
+    return df
 
 def main():
     """Main function to create dataset that will be used for modeling.
@@ -116,49 +105,54 @@ def main():
     files = run_processing()
 
     playoff_team_data = files['playoff_team_stats']
-    reg_team_data = files['regular_team_stats']
+    reg_team_data = files['reg_team_stats']
 
 
     playoff_team_data = create_playoff_stage(playoff_team_data)
-    playoff_team_data = engineer_features(playoff_team_data)
+    playoff_team_data = engineer_team_features(playoff_team_data)
 
-    reg_team_data = create_playoff_stage(reg_team_data)
-    reg_team_data = engineer_features(reg_team_data)
 
-    selected_columns = [
-        "team_id",
-        "team_name",
-        "season",
-        
-        "effective_field_goal_pct",
-        "turnover_ratio",
-        "offensive_rebound_rate",
-        "assist_turnover_ratio",
-        #"fg3_pct",
-        "three_point_rate",
-        "free_throw_rate",
-        "rebound_rate",
-        "defensive_rebound_rate",
-        "net_rating_proxy",
-        #"w_pct"
-    ]
+    reg_team_data = engineer_team_features(reg_team_data)
+
+    team_columns = [
+    "team_id",
+    "team_name",
+    "season",
+
+    # API-provided
+    "efg_pct",
+    "ts_pct",
+    "off_rating",
+    "def_rating",
+    "net_rating",
+    "pace",
+    "pie",
+    "oreb_pct",
+    "dreb_pct",
+    "tm_tov_pct",
+    "ast_to",
+
+    # Engineered
+    "three_point_rate",
+    "free_throw_rate",
+]
     
 
-    numeric_cols = playoff_team_data[selected_columns[:3] + ["playoff_stage"] + selected_columns[3:]].select_dtypes(include="number").columns
+    numeric_cols = playoff_team_data[team_columns + ["playoff_stage"]].select_dtypes(include="number").columns
     corr_matrix = playoff_team_data[numeric_cols].corr().round(2)
     corr_path = os.path.join(feature_path,"correlation.csv")
     corr_matrix.to_csv(corr_path,index=False)
         
 
-    playoff_team_model = playoff_team_data[selected_columns[:3] + ["playoff_stage"] + selected_columns[3:]]
+    playoff_team_model = playoff_team_data[team_columns + ["playoff_stage"]]
     playoff_output_path = os.path.join(feature_path,"playoff_team_modeling_dataset.csv")
     playoff_team_model.to_csv(playoff_output_path,index=False)
 
-    reg_team_model = reg_team_data[selected_columns]
+    reg_team_model = reg_team_data[team_columns]
     reg_output_path = os.path.join(feature_path,"reg_team_modeling_dataset.csv")
     reg_team_model.to_csv(reg_output_path,index=False)
 
-    reg_team_model = prefix_reg_columns(reg_team_model)
+
 
 
 
