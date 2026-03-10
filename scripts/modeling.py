@@ -102,8 +102,8 @@ def main():
     Output:
         data/results/latest_season_predictions.csv
     """
-    playoff_df = pd.read_csv("data/features/playoff_team_modeling_dataset.csv")
-    reg_df = pd.read_csv("data/features/reg_team_modeling_dataset.csv")
+    playoff_df = pd.read_csv("data/features/playoff_team_features.csv")
+    reg_df = pd.read_csv("data/features/reg_team_features.csv")
 
     # Get latest regular season stats for all 30 teams
     # Assign fake playoff_stage so dropna() keeps them, and fake season
