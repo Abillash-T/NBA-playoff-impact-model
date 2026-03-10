@@ -42,9 +42,6 @@ def clean_column_names(raw_path,processed_path):
 
             clean_name = filename.replace('_2015_2025','')
 
-            processed_file_path = os.path.join(processed_path,clean_name)
-            df.to_csv(processed_file_path,index=False)
-
 
             clean_name = filename.replace('_2015_2025.csv', '')
 
@@ -55,7 +52,7 @@ def clean_column_names(raw_path,processed_path):
     
     return processed_files
 
-def merge_player_stats(box_stats, advanced_stats):
+def merge_stats(box_stats, advanced_stats, merge_keys):
     """Merges Player per game and player advanced stats into one dataframe
 
     Merges the box_stats and advanced_stats csv's using the player id, team id, and season as keys
@@ -68,21 +65,12 @@ def merge_player_stats(box_stats, advanced_stats):
     Returns:
         The merged dataframe
     """
-    merge_keys = ["player_id","team_id","season"]
-
     advanced_stats = advanced_stats.loc[
-        :,~advanced_stats.columns.isin(box_stats.columns)
+        :, ~advanced_stats.columns.isin(box_stats.columns)
         | advanced_stats.columns.isin(merge_keys)
     ]
 
-    df = pd.merge(
-        box_stats,
-        advanced_stats,
-        on=merge_keys,
-        how="inner"
-    )
-
-    return df
+    return pd.merge(box_stats, advanced_stats, on=merge_keys, how="inner")
 
 
 
@@ -119,17 +107,41 @@ def main():
 
     files = clean_column_names(raw_path, processed_path) 
 
+    playoff_player = merge_stats(
+        files['playoff_player_per_game'],
+        files['playoff_player_advanced'],
+        merge_keys=["player_id", "team_id", "season"]
+)
 
-    combine = merge_player_stats(
-        files['player_per_game_playoffs'],   # no year, no .csv
-        files['player_advanced_playoffs']
+    reg_player = merge_stats(
+        files['regular_player_per_game'],
+        files['regular_player_advanced'],
+        merge_keys=["player_id", "team_id", "season"]
     )
 
-    combine_path = os.path.join(processed_path, "player_stats.csv")
-    combine.to_csv(combine_path, index=False)
+    playoff_team = merge_stats(
+        files['playoff_team_stats'],
+        files['playoff_team_advanced'],
+        merge_keys=["team_id", "season"] 
+    )
 
-    files['player_stats'] = combine  # add clean key before returning
-    return files    
+    reg_team = merge_stats(
+        files['regular_team_stats'],
+        files['regular_team_advanced'],
+        merge_keys=["team_id", "season"]
+    )
+
+    playoff_player.to_csv(os.path.join(processed_path, "playoff_player_stats.csv"), index=False)
+    reg_player.to_csv(os.path.join(processed_path, "reg_player_stats.csv"), index=False)
+    playoff_team.to_csv(os.path.join(processed_path, "playoff_team_stats.csv"), index=False)
+    reg_team.to_csv(os.path.join(processed_path, "reg_team_stats.csv"), index=False)   
+
+    files['playoff_player_stats'] = playoff_player # add clean key before returning
+    files['reg_player_stats'] = reg_player
+    files['playoff_team_stats'] = playoff_team
+    files['reg_team_stats'] = reg_team
+    
+    return files 
     
 
 if __name__ == "__main__":
