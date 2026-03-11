@@ -3,6 +3,7 @@ import os
 from process_data import main as run_processing
 
 
+
 def create_playoff_stage(df):
     """Creates multiclass playoff stage label based on playoff wins.
 
@@ -15,14 +16,8 @@ def create_playoff_stage(df):
 
     Returns:
         A df with the "playoff_stage" column added to the input.
+        NaN values (teams with no playoff wins recorded) are replaced with None.
     """
-    conditions = [
-        df['w']<= 3,                     #first round exit
-        df['w'].between(4,7),            #second round exit
-        df['w'].between(8,11),           #conference finals
-        df['w'].between(12,15),          #finals
-        df['w'] >= 16                    #champion
-    ]
 
     labels = [
         "First Round",
@@ -38,47 +33,47 @@ def create_playoff_stage(df):
         labels=labels
     )
 
+    df["playoff_stage"] = df["playoff_stage"].astype(str).replace("nan", None)
+
     return df
 
 def engineer_team_features(df):
-    """Creates intereptable team-level features
+    """Creates interpretable team-level features
 
-    creates new columns for extra stats that aren't already covered in the API to compare and 
-    contrast with other teams.
+    Derives shooting profile metrics not directly available from the API.
 
     Args:
-        df: a dataframe consisting of team stats
+        df: a dataframe consisting 'fg3a', 'fga', 'fta' columns.
 
     Returns:
-        the input df with the new stat columns added
+        df with 'three_point_rate' and 'free_throw_rate' columns added
     """
     df = df.copy()
 
-    # SHOOTING PROFILE METRICS
+    # Shooting profile metrics
     df["three_point_rate"] = df["fg3a"] / df["fga"]
     df["free_throw_rate"] = df["fta"] / df["fga"]
 
 
     return df
 
-def engineer_top3_players(df,top_n = 3):
-    """Aggregates top-N players per team per season into team-level features.
-    
-    For each (team_id, season) group, selects the top N players by PIE
-    (Player Impact Estimate) and averages their stats. The resulting columns
-    are prefixed with 'top3_' to distinguish them from team-level features.
+def engineer_best_player(df):
+    """Selects the top player per team per season by PIE and returns their stats.
 
-    Called separately on playoff player data and regular season player data.
+    For each (team_id, season) group, ranks players by PIE (Player Impact
+    Estimate) and keeps only the highest-ranked player. Their stats are
+    prefixed with 'top1_' to distinguish them from team-level features.
 
+    Called separately on playoff and regular season player data. The caller
+    in modeling.py handles the fake season label and concat.
 
     Args:
-        player_df: DataFrame of player stats. Must contain:
-                   team_id, season, pie, and the stat columns listed below.
-        top_n: Number of top players per team to aggregate (default: 3).
+        df: DataFrame of player stats containing 'team_id', 'team_abbreviation',
+            'season', 'pie', and the stat columns listed in agg_cols.
 
     Returns:
-        DataFrame with one row per (team_id, season) with averaged top-N
-        player stats, prefixed with 'top3_'.
+        DataFrame with one row per (team_id, season) containing the top
+        player's stats, prefixed with 'top1_'.
     """
     df = df.copy()
 
@@ -103,17 +98,18 @@ def engineer_top3_players(df,top_n = 3):
         .rank(method="first",ascending=False)
     )
 
-    top_players = df[df["pie_rank"] <= top_n]
+    top_players = df[df["pie_rank"] <= 1]
 
-    top3_agg = (
+    best = (
         top_players
         .groupby(["team_id", "team_abbreviation", "season"])[agg_cols]
         .mean()
         .reset_index()
-        .rename(columns={col: f"top3_{col}" for col in agg_cols})
+        .rename(columns={col: f"top1_{col}" for col in agg_cols})
     )
 
-    return top3_agg
+    return best
+
 
 def main():
     """Main function to create dataset that will be used for modeling.
@@ -123,10 +119,8 @@ def main():
     1. Loads all cleaned files from process_data.
     2. Creates the playoff_stage label from playoff win totals.
     3. Engineers team-level features (shooting rates etc.).
-    4. Aggregates top-3 player features (by PIE) from both playoff and
+    4. Selects the top player features (by PIE) from both playoff and
        regular season player data and saves them as separate files.
-       No merging is done here — modeling.py handles that at runtime,
-       exactly as it does for team features.
     5. Saves all outputs to data/features/.
 
     This script assumes that process_data has been run, and there are existing files in the processed_path
@@ -155,13 +149,17 @@ def main():
     reg_player_data = files['reg_player_stats']
 
 
+
+    # Labels for playoffs
     playoff_team_data = create_playoff_stage(playoff_team_data)
 
+    # Team-level features
     playoff_team_data = engineer_team_features(playoff_team_data)
     reg_team_data = engineer_team_features(reg_team_data)
 
-    playoff_top3 = engineer_top3_players(playoff_player_data)
-    reg_top3 = engineer_top3_players(reg_player_data)
+    # Best player features
+    playoff_top1 = engineer_best_player(playoff_player_data)
+    reg_top1 = engineer_best_player(reg_player_data)
 
 
     team_columns = [
@@ -206,31 +204,26 @@ def main():
         "pie",          
         "oreb_pct",
         "dreb_pct",
-    #    "usage_efficiency"
-]
-
-    #numeric_cols = playoff_team_data[team_columns + ["playoff_stage"]].select_dtypes(include="number").columns
-    #corr_matrix = playoff_team_data[numeric_cols].corr().round(2)
-    #corr_path = os.path.join(feature_path,"correlation.csv")
-    #corr_matrix.to_csv(corr_path,index=False)
+    ]
 
     
-        
+    playoff_team_data[team_columns + ["playoff_stage"]].to_csv(
+        os.path.join(feature_path,"playoff_team_features.csv"),index=False)
 
-    playoff_team_model = playoff_team_data[team_columns + ["playoff_stage"]]
-    playoff_team_model.to_csv(os.path.join(feature_path,"playoff_team_features.csv"),index=False)
+    reg_team_data[team_columns].to_csv(
+        os.path.join(feature_path,"reg_team_features.csv"),index=False)
 
-    reg_team_model = reg_team_data[team_columns]
-    reg_team_model.to_csv(os.path.join(feature_path,"reg_team_features.csv"),index=False)
 
-    playoff_player_model = playoff_player_data[player_columns]
-    playoff_player_model.to_csv(os.path.join(feature_path,"playoff_player_features.csv"),index=False)
+    playoff_player_data[player_columns].to_csv(
+        os.path.join(feature_path,"playoff_player_features.csv"),index=False)
 
-    reg_player_model = reg_player_data[player_columns]
-    reg_player_model.to_csv(os.path.join(feature_path,"reg_player_features.csv"),index=False)
 
-    playoff_top3.to_csv(os.path.join(feature_path,"playoff_top3_player_features.csv"),index=False)
-    reg_top3.to_csv(os.path.join(feature_path,"reg_top3_player_features.csv"),index=False)
+    reg_player_data[player_columns].to_csv(
+        os.path.join(feature_path,"reg_player_features.csv"),index=False)
+
+    playoff_top1.to_csv(os.path.join(feature_path,"playoff_top1_features.csv"),index=False)
+
+    reg_top1.to_csv(os.path.join(feature_path,"reg_top1_features.csv"),index=False)
 
     
 
