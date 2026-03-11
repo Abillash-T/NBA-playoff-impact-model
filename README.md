@@ -21,7 +21,7 @@ A deep playoff run is defined as reaching:
 - Top player features derived by selecting each team's highest-PIE player from regular season data
 - Evaluation metric: ROC-AUC
   
-Mean Season-Based ROC-AUC: ~0.823
+Mean Season-Based ROC-AUC: ~0.812
 
 # Project Structure:
 - collect_raw_data.py
