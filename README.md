@@ -1,10 +1,10 @@
 # NBA-playoff-impact-model
 
-A season‑aware machine learning model that predicts which NBA teams are likely to reach the Conference Finals using engineered efficiency metrics from the 2015–16 through 2024–25 seasons.
+A season-aware machine learning model that predicts which NBA teams are likely to reach the Conference Finals using engineered efficiency metrics and star player impact from the 2015–16 through 2024–25 seasons.
 
 # Project Objective
 
-To estimate the probability that a team will make a deep playoff run (Conference Finals or beyond) based on regular-season efficiency metrics.
+To estimate the probability that a team will make a deep playoff run (Conference Finals or beyond) based on regular-season efficiency metrics and top player performance.
 
 A deep playoff run is defined as reaching:
 - Conference Finals
@@ -18,9 +18,10 @@ A deep playoff run is defined as reaching:
 - Leave-One-Season-Out cross-validation
 - Most recent season held out for forecasting simulation
 - Current regular season stats for all 30 teams appended to training data to enrich predictions
+- Top player features derived by selecting each team's highest-PIE player from regular season data
 - Evaluation metric: ROC-AUC
   
-Mean Season-Based ROC-AUC: ~0.81
+Mean Season-Based ROC-AUC: ~0.823
 
 # Project Structure:
 - collect_raw_data.py
@@ -49,12 +50,10 @@ pip install nba_api pandas scikit-learn
 This script collects NBA playoff data (2015–16 through 2024–25) directly from the NBA Stats API using the `nba_api` package.
 
 It retrieves:
-- Player per-game playoff statistics
-- Player advanced playoff statistics
-- Team playoff statistics
-- Team regular statistics
-- Player game logs
-- All datasets are saved in the data/raw/ directory for downstream processing.
+- Player per-game and advanced statistics (playoff and regular season)
+- Team per-game and advanced statistics (playoff and regular season)
+
+All datasets are saved to `data/raw/` for downstream processing.
 
 # process_data.py
 
@@ -63,18 +62,18 @@ This script standardizes and prepares raw NBA playoff data for analysis.
 It performs the following steps:
 - Cleans and standardizes column names (lowercase, trimmed, underscores)
 - Removes redundant ranking columns
-- Saves cleaned datasets to data/processed
-- Merges player per-game stats with advanced stats into a single dataset
-- Preserves original files for reproducibility
+- Merges per-game stats with advanced stats into unified team and player datasets
+- Saves cleaned datasets to `data/processed/`
 
 # feature_engineering.py
 
-This script creates the final modeling dataset from processed team playoff statistics (2015–2025).
+Creates the final modeling datasets from processed team and player statistics.
 
 Features:
-- Creates a multiclass playoff outcome variable (playoff_stage)
-- Engineers interpretable team efficiency metrics
-- Exports a modeling-ready dataset and correlation matrix
+- Creates a binary playoff outcome label (`deep_playoff_run`) from playoff win totals
+- Engineers interpretable team efficiency metrics (three-point rate, free throw rate)
+- Selects each team's highest-PIE player per season and extracts their key stats, prefixed with `top1_`
+- Saves playoff and regular season datasets separately to `data/features/`
 
 # modeling.py
 
@@ -82,20 +81,21 @@ Trains and evaluates the predictive model using a season‑aware Random Forest c
 
 Key Features
 
-- Leave‑One‑Season‑Out (LOSO) validation to simulate real forecasting conditions
-- Class‑balanced Random Forest to address playoff outcome imbalance
+- Merges historic playoff top player features into the playoff team dataset
+- Appends the latest regular season team and player stats (tagged with a fake season label) to enrich training without leaking into the prediction target
+- Leave-One-Season-Out (LOSO) validation to simulate real forecasting conditions
+- Class-balanced Random Forest to address playoff outcome imbalance
 - Predicts deep playoff run probability for each team in the most recent season
-- Outputs:
-  - Season‑level ROC‑AUC scores
-  - Feature importances
-  - Latest‑season predictions (data/results/latest_season_predictions.csv)
+
+Output:
+- Season-level ROC-AUC scores
+- Latest-season predictions saved to data/results/latest_season_predictions.csv
 
 
 # Future Improvements
 
-- Incorporate defensive rating splits
-- Add late-season momentum metrics
-- Include prior playoff experience
+- XGBoost or gradient boosting to extract more signal from the current feature set
+- Late-season momentum metrics
 - Hyperparameter tuning with cross-validation
 
 
