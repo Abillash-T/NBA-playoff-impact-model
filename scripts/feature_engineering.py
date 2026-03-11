@@ -64,9 +64,6 @@ def engineer_best_player(df):
     Estimate) and keeps only the highest-ranked player. Their stats are
     prefixed with 'top1_' to distinguish them from team-level features.
 
-    Called separately on playoff and regular season player data. The caller
-    in modeling.py handles the fake season label and concat.
-
     Args:
         df: DataFrame of player stats containing 'team_id', 'team_abbreviation',
             'season', 'pie', and the stat columns listed in agg_cols.
@@ -103,7 +100,7 @@ def engineer_best_player(df):
     best = (
         top_players
         .groupby(["team_id", "team_abbreviation", "season"])[agg_cols]
-        .mean()
+        .first()
         .reset_index()
         .rename(columns={col: f"top1_{col}" for col in agg_cols})
     )
