@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 
 
+
 def predict_latest_season(df):
     """Based on a random forest classifier, generate likely finals contenders.
 
@@ -18,6 +19,7 @@ def predict_latest_season(df):
             - team_name (str)
             - playoff_stage (str)
             - engineered team efficiency features
+            - engineered top player features
 
     Returns:
         DataFrame for the most recent season containing:
@@ -26,10 +28,11 @@ def predict_latest_season(df):
             - actual (binary ground truth)
 
     Notes:
-        The model is trained using all seasons except the most recent one to simulate a
-        real-world forecasting scenario. The most recent season's regular season stats
-        are appended to the training set with a fake season label to ensure they are
-        included in training without being treated as the prediction target.
+        The model is trained on all seasons except the most recent one.
+        The most recent season's regular season stats are appended with a
+        fake season label ("2024-25-reg") and playoff_stage="Unknown"
+        (which maps to deep_playoff_run=0) so they enrich training without
+        ever becoming the prediction target.
     """
     df = df.dropna().copy()
     df["deep_playoff_run"] = (
@@ -37,7 +40,7 @@ def predict_latest_season(df):
     ).astype(int)
 
     team_features = [
-    # API-provided
+    # Team-level: API-provided
     "efg_pct",
     "ts_pct",
     "off_rating",
@@ -49,10 +52,20 @@ def predict_latest_season(df):
     "tm_tov_pct",
     "ast_to",
 
-    # Engineered
+    # Team-level Engineered
     "three_point_rate",
     "free_throw_rate",
-]
+
+    # Top player aggregates
+    "top1_pie",
+    "top1_def_rating",
+    "top1_net_rating",
+    "top1_efg_pct",
+    "top1_usg_pct"
+    ]
+
+
+    # Exclude fake regular season rows from being the prediction target
     latest_season = sorted(
         [s for s in df["season"].unique() if "-reg" not in s]
     )[-1]
@@ -89,31 +102,44 @@ def predict_latest_season(df):
     auc = roc_auc_score(y_test, probs)
     print(f"\nROC-AUC for {latest_season}: {auc:.3f}")
 
+
+
     return results
 
 
 def main():
     """Main function to predict behaviours based on modeling dataset.
 
-    Load engineered team feature datasets, append the latest regular season
-    stats to the playoff dataset for enriched training, generate predictions
-    for the most recent NBA season, and save results to disk.
+    Loads engineered team and top player feature datasets, merges them,
+    appends the latest regular season stats with a fake season label for
+    enriched training, generates predictions for the most recent NBA season,
+    and saves results to disk.
 
     Output:
         data/results/latest_season_predictions.csv
     """
     playoff_df = pd.read_csv("data/features/playoff_team_features.csv")
     reg_df = pd.read_csv("data/features/reg_team_features.csv")
+    playoff_top1 = pd.read_csv("data/features/playoff_top1_features.csv")
+    reg_top1 = pd.read_csv("data/features/reg_top1_features.csv")
 
-    # Get latest regular season stats for all 30 teams
-    # Assign fake playoff_stage so dropna() keeps them, and fake season
-    # so they're never treated as the prediction target
+    # Merge historic playoff top1 player features into playoff team rows
+    playoff_df = playoff_df.merge(playoff_top1, on=["team_id","season"],how="left")
+
+
+    # Build latest regular sesason rows
     latest_reg = reg_df[reg_df["season"] == reg_df["season"].max()].copy()
     latest_reg["playoff_stage"] = "Unknown"   # maps to deep_playoff_run = 0
     latest_reg["season"] = "2024-25-reg"      # excluded from latest_season filter
 
-    # Combine with playoff dataset
+    # Merge current reg season top1 player features into latest_reg rows
+    latest_reg_top1 = reg_top1[reg_top1["season"] == reg_top1["season"].max()].copy()
+    latest_reg_top1["season"] = "2024-25-reg" 
+    latest_reg = latest_reg.merge(latest_reg_top1,on=["team_id","season"],how="left")
+
+
     combined_df = pd.concat([playoff_df, latest_reg], ignore_index=True)
+
 
     result_path = "data/results"
     os.makedirs(result_path, exist_ok=True)
@@ -122,6 +148,8 @@ def main():
 
     output_path = os.path.join(result_path, "latest_season_predictions.csv")
     team_pred.to_csv(output_path, index=False)
+
+    
 
 
 if __name__ == "__main__":
