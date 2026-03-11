@@ -6,7 +6,7 @@ from nba_api.stats.library.http import NBAStatsHTTP
 from requests import Session
 
 import random
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, ReadTimeout
 
 # Create a custom session with browser-like headers
 custom_session = Session()
@@ -21,6 +21,8 @@ custom_session.headers.update({
     "Origin": "https://www.nba.com",
     "Connection": "keep-alive",
 })
+# nba_api default timeout is 30s — increase to handle slow responses from stats.nba.com
+NBAStatsHTTP.DEFAULT_TIMEOUT = 60
 
 # Inject it into nba_api globally
 NBAStatsHTTP._session = custom_session
@@ -45,9 +47,9 @@ def safe_api_call(api_callable, max_retries=5):
             time.sleep(random.uniform(5, 9))
             return result
 
-        except ConnectionError as e:
+        except (ConnectionError, ReadTimeout) as e:
             wait = 2 ** attempt  # exponential backoff
-            print(f"Connection failed. Retry {attempt+1}/{max_retries} in {wait}s...")
+            print(f"Request failed ({type(e).__name__}). Retry {attempt+1}/{max_retries} in {wait}s...")
             time.sleep(wait)
 
     raise Exception("Max retries exceeded. NBA API likely blocking requests.")
@@ -76,15 +78,14 @@ def fetch_player_stats(seasons, per_mode='PerGame',season_type='Playoffs',measur
     all_playoffs = []
 
     for season in seasons:
-        df = safe_api_call(lambda: LeagueDashPlayerStats(
-            season=season,
+        df = safe_api_call(lambda s=season: LeagueDashPlayerStats(
+            season=s,
             season_type_all_star=season_type,
             per_mode_detailed=per_mode,
             measure_type_detailed_defense=measure_type
         ).get_data_frames()[0])
         df['SEASON'] = season
         all_playoffs.append(df)
-        time.sleep(1)
     player_stats = pd.concat(all_playoffs,ignore_index=True)
 
     return player_stats
@@ -111,15 +112,14 @@ def fetch_team_stats(seasons,per_mode='PerGame',season_type='Playoffs',measure_t
     all_playoffs = []
 
     for season in seasons:
-        df = safe_api_call(lambda: LeagueDashTeamStats(
-            season=season,
+        df = safe_api_call(lambda s=season: LeagueDashTeamStats(
+            season=s,
             season_type_all_star=season_type,
             per_mode_detailed=per_mode,
             measure_type_detailed_defense=measure_type
         ).get_data_frames()[0])
         df['SEASON'] = season
         all_playoffs.append(df)
-        time.sleep(1)
     team_stats = pd.concat(all_playoffs,ignore_index=True)
 
     return team_stats
@@ -147,14 +147,13 @@ def fetch_game_logs(seasons, player_or_team='P', season_type='Playoffs'):
     all_playoffs = []
 
     for season in seasons:
-        df = safe_api_call(lambda: LeagueGameLog(
-            season=season,
+        df = safe_api_call(lambda s=season: LeagueGameLog(
+            season=s,
             season_type_all_star=season_type,
             player_or_team_abbreviation=player_or_team
         ).get_data_frames()[0])
         df['SEASON'] = season
         all_playoffs.append(df)
-        time.sleep(1)
     log_stats = pd.concat(all_playoffs,ignore_index=True)
 
     return log_stats
@@ -208,8 +207,8 @@ def main():
     regular_team_advanced.to_csv("data/raw/regular_team_advanced_2015_2025.csv",index=False)
 
 
-    game_logs = fetch_game_logs(SEASONS,player_or_team='P')
-    game_logs.to_csv("data/raw/game_logs_2015_2025.csv",index=False)
+    #game_logs = fetch_game_logs(SEASONS,player_or_team='P')
+    #game_logs.to_csv("data/raw/game_logs_2015_2025.csv",index=False)
 
 
 
