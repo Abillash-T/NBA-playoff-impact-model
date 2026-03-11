@@ -211,12 +211,10 @@ def main():
         os.path.join(feature_path,"reg_team_features.csv"),index=False)
 
 
-    playoff_player_data[player_columns].to_csv(
-        os.path.join(feature_path,"playoff_player_features.csv"),index=False)
+    #playoff_player_data[player_columns].to_csv(os.path.join(feature_path,"playoff_player_features.csv"),index=False)
 
 
-    reg_player_data[player_columns].to_csv(
-        os.path.join(feature_path,"reg_player_features.csv"),index=False)
+    #reg_player_data[player_columns].to_csv(os.path.join(feature_path,"reg_player_features.csv"),index=False)
 
     playoff_top1.to_csv(os.path.join(feature_path,"playoff_top1_features.csv"),index=False)
 

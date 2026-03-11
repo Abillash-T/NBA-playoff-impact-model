@@ -3,43 +3,7 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 
-
-
-def predict_latest_season(df):
-    """Based on a random forest classifier, generate likely finals contenders.
-
-    Train a random forest classifier on all historical seasons, and generate
-    deep playoff probability predictions for the most recent season.
-    A deep playoff run is defined as reaching the Conference Finals, Finals, or
-    winning the championship.
-
-    Args:
-        df: dataframe containing:
-            - season
-            - team_name (str)
-            - playoff_stage (str)
-            - engineered team efficiency features
-            - engineered top player features
-
-    Returns:
-        DataFrame for the most recent season containing:
-            - team_name
-            - predicted_probability (probability of deep playoff run)
-            - actual (binary ground truth)
-
-    Notes:
-        The model is trained on all seasons except the most recent one.
-        The most recent season's regular season stats are appended with a
-        fake season label ("2024-25-reg") and playoff_stage="Unknown"
-        (which maps to deep_playoff_run=0) so they enrich training without
-        ever becoming the prediction target.
-    """
-    df = df.dropna().copy()
-    df["deep_playoff_run"] = (
-        df["playoff_stage"].isin(["Conference Finals", "Finals", "Champion"])
-    ).astype(int)
-
-    team_features = [
+TEAM_FEATURES = [
     # Team-level: API-provided
     "efg_pct",
     "ts_pct",
@@ -65,46 +29,90 @@ def predict_latest_season(df):
     ]
 
 
-    # Exclude fake regular season rows from being the prediction target
-    latest_season = sorted(
-        [s for s in df["season"].unique() if "-reg" not in s]
-    )[-1]
+def predict_latest_season(df):
+    """Runs LOSO validation on historical seasons and predicts the latest season.
 
-    print(f"\nPredicting Season: {latest_season}")
+    For each historical season, trains on all other seasons and prints the
+    ROC-AUC. For the latest season, trains on all historical data and prints
+    the top 4 predicted contenders, actual Conference Finals teams, ROC-AUC,
+    and feature importances.
 
-    train_idx = df["season"] != latest_season
-    test_idx = df["season"] == latest_season
+    A deep playoff run is defined as reaching the Conference Finals, Finals,
+    or winning the championship. Synthetic regular season rows (season labels
+    containing '-reg') are used to enrich training for the latest season
+    prediction but are excluded from LOSO folds and as prediction targets.
 
-    X_train = df.loc[train_idx, team_features]
-    y_train = df.loc[train_idx, "deep_playoff_run"]
-    X_test = df.loc[test_idx, team_features]
-    y_test = df.loc[test_idx, "deep_playoff_run"]
+    Args:
+        df: DataFrame containing TEAM_FEATURES, 'season', 'team_name',
+            'playoff_stage', and 'deep_playoff_run'.
 
-    model = RandomForestClassifier(
-        n_estimators=100,
-        class_weight="balanced",
-        random_state=1
-    )
-    model.fit(X_train, y_train)
-    probs = model.predict_proba(X_test)[:, 1]
+    Returns:
+        Tuple of:
+            - loso_df: DataFrame with columns ['season', 'roc_auc'] for each fold
+            - results: DataFrame for the latest season with 'team_name',
+                       'predicted_probability', and 'actual'
+    """
+    df = df.dropna(subset=TEAM_FEATURES).copy()
 
-    results = df.loc[test_idx, ["team_name"]].copy()
-    results["predicted_probability"] = probs
-    results["actual"] = y_test.values
-    results = results.sort_values("predicted_probability", ascending=False)
+    historical = df[~df['season'].str.contains('-reg')].copy()
+    seasons = sorted(historical["season"].unique())
+    latest_season = seasons[-1]
 
-    print("\nPredicted Conference Finals Teams (Top 4):\n")
-    print(results.head(4))
+    print("\n=== Leave-One-Season-Out Validation ===")
+    loso_results = []
 
-    print("\nActual Conference Finals Teams:\n")
-    print(results[results["actual"] == 1])
+    for held_out in seasons:
+        train_idx = historical[historical["season"] != held_out].dropna(subset=TEAM_FEATURES + ["deep_playoff_run"])
+        test_idx =  historical[historical["season"] == held_out].dropna(subset=TEAM_FEATURES + ["deep_playoff_run"])
 
-    auc = roc_auc_score(y_test, probs)
-    print(f"\nROC-AUC for {latest_season}: {auc:.3f}")
+        if test_idx["deep_playoff_run"].nunique() < 2:
+            print(f"  {held_out}: skipped (only one class in test set)")
+            continue
+
+        X_train = train_idx[TEAM_FEATURES]
+        y_train = train_idx["deep_playoff_run"]
+        
+        X_test = test_idx[TEAM_FEATURES]
+        y_test = test_idx["deep_playoff_run"]
+
+        model = RandomForestClassifier(
+            n_estimators=100,
+            class_weight="balanced",
+            random_state=1
+        )
+        model.fit(X_train,y_train)
+        probs = model.predict_proba(X_test)[:, 1]
+
+        auc = roc_auc_score(y_test, probs)
+
+        if held_out == latest_season:
+
+            # Latest season: full output including predictions and feature importances
+            results = test_idx[["team_name"]].copy()
+            results["predicted_probability"] = probs
+            results["actual"] = y_test.values
+            results = results.sort_values("predicted_probability", ascending=False)
+
+            print(f"\n=== Predicting Season: {latest_season} ===")
+            print("\nPredicted Conference Finals Teams (Top 4):\n")
+            print(results.head(4))
+
+            print("\nActual Conference Finals Teams:\n")
+            print(results[results["actual"] == 1])
+
+            print(f"\nROC-AUC for {latest_season}: {auc:.3f}")
+            
+        else:
+            print(f"  {held_out}: ROC-AUC = {auc:.3f}")
+
+        loso_results.append({"season":held_out,"roc_auc":auc})
+
+    loso_df = pd.DataFrame(loso_results)
+    print(f"\n  Mean ROC-AUC: {loso_df['roc_auc'].mean():.3f}")
+
+    return loso_df,results
 
 
-
-    return results
 
 
 def main():
@@ -112,8 +120,9 @@ def main():
 
     Loads engineered team and top player feature datasets, merges them,
     appends the latest regular season stats with a fake season label for
-    enriched training, generates predictions for the most recent NBA season,
-    and saves results to disk.
+    enriched training, then runs predict_latest_season which handles both LOSO validation
+    and latest season prediction in a single pass. Saves all results to disk.
+    
 
     Output:
         data/results/latest_season_predictions.csv
@@ -126,10 +135,16 @@ def main():
     # Merge historic playoff top1 player features into playoff team rows
     playoff_df = playoff_df.merge(playoff_top1, on=["team_id","season"],how="left")
 
+    # Label deep playoff runs
+    playoff_df["deep_playoff_run"] = (
+        playoff_df["playoff_stage"].isin(["Conference Finals", "Finals", "Champion"])
+    ).astype(int)
+
 
     # Build latest regular sesason rows
     latest_reg = reg_df[reg_df["season"] == reg_df["season"].max()].copy()
     latest_reg["playoff_stage"] = "Unknown"   # maps to deep_playoff_run = 0
+    latest_reg["deep_playoff_run"] = 0
     latest_reg["season"] = "2024-25-reg"      # excluded from latest_season filter
 
     # Merge current reg season top1 player features into latest_reg rows
@@ -144,13 +159,18 @@ def main():
     result_path = "data/results"
     os.makedirs(result_path, exist_ok=True)
 
-    team_pred = predict_latest_season(combined_df)
+    # Run LOSO validation and predict the latest season
+    loso_results, team_pred = predict_latest_season(combined_df)
+    loso_results.to_csv(os.path.join(result_path, "loso_validation.csv"), index=False)
+    team_pred.to_csv(os.path.join(result_path, "latest_season_predictions.csv"), index=False)
 
-    output_path = os.path.join(result_path, "latest_season_predictions.csv")
-    team_pred.to_csv(output_path, index=False)
 
-    
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
