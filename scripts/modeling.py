@@ -3,8 +3,10 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 
+
 TEAM_FEATURES = [
     # Team-level: API-provided
+    
     "efg_pct",
     "ts_pct",
     "off_rating",
@@ -93,6 +95,11 @@ def predict_latest_season(df):
             results["actual"] = y_test.values
             results = results.sort_values("predicted_probability", ascending=False)
 
+            feature_importances = pd.DataFrame({
+                "feature": TEAM_FEATURES,
+                "importance": model.feature_importances_
+            }).sort_values("importance", ascending=False)
+
             print(f"\n=== Predicting Season: {latest_season} ===")
             print("\nPredicted Conference Finals Teams (Top 4):\n")
             print(results.head(4))
@@ -110,7 +117,7 @@ def predict_latest_season(df):
     loso_df = pd.DataFrame(loso_results)
     print(f"\n  Mean ROC-AUC: {loso_df['roc_auc'].mean():.3f}")
 
-    return loso_df,results
+    return loso_df,results,feature_importances
 
 
 
@@ -160,9 +167,11 @@ def main():
     os.makedirs(result_path, exist_ok=True)
 
     # Run LOSO validation and predict the latest season
-    loso_results, team_pred = predict_latest_season(combined_df)
+    loso_results, team_pred, feature_importances = predict_latest_season(combined_df)
     loso_results.to_csv(os.path.join(result_path, "loso_validation.csv"), index=False)
     team_pred.to_csv(os.path.join(result_path, "latest_season_predictions.csv"), index=False)
+    feature_importances.to_csv(os.path.join(result_path, "feature_importances.csv"), index=False)
+
 
 
 
