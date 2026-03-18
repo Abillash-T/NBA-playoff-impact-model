@@ -21,7 +21,13 @@ A deep playoff run is defined as reaching:
 - Top player features derived by selecting each team's highest-PIE player from regular season data
 - Evaluation metric: ROC-AUC
   
-Mean Season-Based ROC-AUC: ~0.812
+Mean Season-Based ROC-AUC: ~0.852
+
+# Dashboard
+Interactive dashboard visualizing model predictions, LOSO validation results, and feature importances.
+
+- [View on Tableau Public](https://public.tableau.com/views/NBAPlayoffPredictionModel/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
+- Download `dashboard/nba_playoff_dashboard.twbx` to open locally in Tableau
 
 # Project Structure:
 - collect_raw_data.py
