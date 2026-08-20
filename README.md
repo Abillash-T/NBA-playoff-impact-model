@@ -11,17 +11,23 @@ A deep playoff run is defined as reaching:
 - NBA Finals
 - NBA Champion
 
+# Feature Selection
+
+- Binary classification problem indicating whether a team reached the Conference Finals or beyond.
+- Candidate features include team-level efficiency metrics and top player statistics.
+- LASSO regression and classification trees are used to identify informative features.
+- Classification tree feature selection is used for the final feature set due to stronger test performance than LASSO(0.59 vs 0.21).
+- Selected features:
+  - `net_rating`
+  - `ts_pct`
+  - `top1_oreb_pct`
+  - `top1_pie`
+  - `top1_usg_pct`
+  - `pie`
+  - `top1_net_rating`
+
 # Modeling Approach
-- Binary classification problem (making a deep playoff run or not)
-- Random Forest Classifier
-- Class weight balancing to address playoff class imbalance
-- Leave-One-Season-Out cross-validation
-- Most recent season held out for forecasting simulation
-- Current regular season stats for all 30 teams appended to training data to enrich predictions
-- Top player features derived by selecting each team's highest-PIE player from regular season data
-- Evaluation metric: ROC-AUC
-  
-Mean Season-Based ROC-AUC: ~0.852
+
 
 # Dashboard
 Interactive dashboard visualizing model predictions, LOSO validation results, and feature importances.
@@ -71,15 +77,17 @@ It performs the following steps:
 - Merges per-game stats with advanced stats into unified team and player datasets
 - Saves cleaned datasets to `data/processed/`
 
-# feature_engineering.py
+# feature_analysis.py
 
-Creates the final modeling datasets from processed team and player statistics.
+Performs feature selection on processed NBA team and player statistics.
 
 Features:
-- Creates a binary playoff outcome label (`deep_playoff_run`) from playoff win totals
-- Engineers interpretable team efficiency metrics (three-point rate, free throw rate)
-- Selects each team's highest-PIE player per season and extracts their key stats, prefixed with `top1_`
-- Saves playoff and regular season datasets separately to `data/features/`
+- Creates a binary playoff outcome label (`made_conf_finals`) indicating whether a team reached the Conference Finals.
+- Engineers interpretable team efficiency metrics, including three-point rate and free throw rate.
+- Selects each team's highest-PIE player per season and extracts their key statistics, prefixed with `top1_`.
+- Splits the data chronologically, using the first 80% of seasons for training and the final 20% for testing.
+- Performs feature selection using LASSO regression and a classification tree.
+- Saves the selected features for use in subsequent forecasting models.
 
 # modeling.py
 
@@ -102,7 +110,7 @@ Output:
 
 - XGBoost or gradient boosting to extract more signal from the current feature set
 - Late-season momentum metrics
-- Hyperparameter tuning with cross-validation
+
 
 
 
