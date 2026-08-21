@@ -47,12 +47,19 @@ def build_label(playoff_team_df):
     labels = ["First Round", "Second Round", "Conference Finals", "Finals", "Champion"]
     df = playoff_team_df.copy()
 
-    df["playoff_stage"] = pd.cut(df["w"], bins = [-1,3,7,11,15,20], labels=labels)
-    made_cf = df[df["playoff_stage"].isin(["Conference Finals", "Finals", "Champion"])]
-    made_cf = made_cf[["team_id","season"]].drop_duplicates()
-    made_cf["made_conf_finals"] = 1
+    df["playoff_stage"] = pd.cut(
+        df["w"], 
+        bins = [-1,3,7,11,15,20], 
+        labels=labels
+        )
+    
+    df["made_conf_finals"] = (
+            df["playoff_stage"]
+            .isin(["Conference Finals", "Finals", "Champion"])
+            .astype(int)
+        )
 
-    return made_cf
+    return df[["team_id", "season", "playoff_stage", "made_conf_finals"]].drop_duplicates()
 
 def engineer_team_features(df):
     """Creates interpretable team-level features
@@ -322,7 +329,6 @@ def main():
         "pie"
     ] 
 
-
     top1_selected = [
         "top1_oreb_pct",
         "top1_pie",
@@ -332,36 +338,63 @@ def main():
     ]  
     
     playoff_team_features = playoff_team_data.merge(
-        playoff_top1[["team_id", "season"] + top1_selected],
+        playoff_top1[["team_abbreviation","team_id", "season"] + top1_selected],
         on=["team_id", "season"],
         how="left"
     )
 
     reg_team_features = reg_team_data.merge(
-        reg_top1[["team_id", "season"] + top1_selected],
+        reg_top1[["team_abbreviation","team_id", "season"] + top1_selected],
         on=["team_id", "season"],
         how="left"
     )
 
-    playoff_team_features["playoff_stage"] = pd.cut(
-        playoff_team_features["w"],
-        bins=[-1, 3, 7, 11, 15, 20],
-        labels=["First Round", "Second Round", "Conference Finals", "Finals", "Champion"]
-    )
+    playoff_labels = build_label(playoff_team_data)
+
+    playoff_team_features = playoff_team_features.merge(
+            playoff_labels[
+                ["team_id", "season", "playoff_stage"]],
+            on=["team_id", "season"],
+            how="left"
+        )
 
     playoff_team_features[
-        ["team_id", "season"] + team_selected + top1_selected + ["playoff_stage"]
-    ].to_csv(
-        os.path.join(feature_path, "playoff_team_features.csv"),
-        index=False
-    )
+        ["team_abbreviation","team_id","season"] + 
+        team_selected + 
+        top1_selected + 
+        ["playoff_stage"]
+    ].to_csv(os.path.join(feature_path,"playoff_team_features.csv"),index=False)
 
     reg_team_features[
-        ["team_id", "season"] + team_selected + top1_selected
-    ].to_csv(
-        os.path.join(feature_path, "reg_team_features.csv"),
+        ["team_abbreviation","team_id","season"] + 
+        team_selected + 
+        top1_selected
+    ].to_csv(os.path.join(feature_path,"reg_team_features.csv"),index=False)
+
+    # Create historical playoff outcome
+    model_df = reg_team_features.merge(
+        playoff_labels[
+            ["team_id", "season", "playoff_stage", "made_conf_finals"]
+        ],
+        on=["team_id", "season"],
+        how="left"
+    )
+
+    model_df["made_conf_finals"] = (
+        model_df["made_conf_finals"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    model_df.to_csv(
+        os.path.join(
+            feature_path,
+            "modeling_features.csv"
+        ),
         index=False
     )
+    
+
 
 if __name__ == "__main__":
     main()
