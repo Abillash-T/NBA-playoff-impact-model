@@ -27,6 +27,13 @@ A deep playoff run is defined as reaching:
   - `top1_net_rating`
 
 # Modeling Approach
+Two candidate models are trained and compared:
+- **Logistic Regression**: standardized features with L2 regularization and balanced class weights.
+- **Random Forest**: hyperparameters (`n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`) tuned via `RandomizedSearchCV` with 5-fold cross-validation, scored on ROC-AUC.
+
+Both models are evaluated using walk-forward validation: starting from a minimum training window of 5 seasons, each model is trained only on prior seasons and tested on the following season, then the window expands by one season and the process repeats. This mimics how the model is actually used, forecasting a season it has not seen any outcomes from.
+
+Final models are refit on all historical seasons (2015-16 through 2024-25) and used to forecast the current season. Teams are grouped by conference, and the two highest predicted probabilities per conference are selected as the model's projected Conference Finalists.
 
 
 # Dashboard
@@ -38,22 +45,24 @@ Interactive dashboard visualizing model predictions, LOSO validation results, an
 # Project Structure:
 - collect_raw_data.py
 - process_data.py
-- feature_engineering.py
-- modeling.py
+- feature_analysis.py
+- forecasting.py
 - README.md
 
 # Libraries
 
 `nba_api`: An API Client Package to Access the APIs of NBA.com([Readmore](https://github.com/swar/nba_api)).
 
-`pandas`: data structures and data analysis tools for the Python programming language.([Readmore](https://pandas.pydata.org/docs/index.html))
+`pandas`: data structures and data analysis tools for the Python programming language([Readmore](https://pandas.pydata.org/docs/index.html)).
 
-`scikit-learn`: Machine learning modeling and evaluation([Readmore](https://scikit-learn.org/stable/))
+`scikit-learn`: Machine learning modelling and evaluation([Readmore](https://scikit-learn.org/stable/))
+
+`scipy`: Statistical distributions and functions for hyperparameter search spaces ([Readmore](https://scipy.org))
 
 # Installing Libraries
 
 ```bash
-pip install nba_api pandas scikit-learn
+pip install nba_api pandas scikit-learn scipy
 ```
 
 
@@ -89,26 +98,18 @@ Features:
 - Performs feature selection using LASSO regression and a classification tree.
 - Saves the selected features for use in subsequent forecasting models.
 
-# modeling.py
-
-Trains and evaluates the predictive model using a season‑aware Random Forest classifier.
-
-Key Features
-
-- Merges historic playoff top player features into the playoff team dataset
-- Appends the latest regular season team and player stats (tagged with a fake season label) to enrich training without leaking into the prediction target
-- Leave-One-Season-Out (LOSO) validation to simulate real forecasting conditions
-- Class-balanced Random Forest to address playoff outcome imbalance
-- Predicts deep playoff run probability for each team in the most recent season
-
-Output:
-- Season-level ROC-AUC scores
-- Latest-season predictions saved to data/results/latest_season_predictions.csv
-
+# forecasting.py
+Trains, validates, and evaluates both models, then generates Conference Finals forecasts for the current season.
+- Loads engineered historical features from `modeling_features.csv` and current-season regular-season stats from `reg_team_features.csv`.
+- Drops rows with missing values in the selected feature set.
+- Runs walk-forward validation for both Logistic Regression and Random Forest, reporting mean ROC-AUC across test seasons.
+- Evaluates both models on a chronological 80/20 historical train/test split for comparison.
+- Refits both models on all historical seasons and forecasts probabilities for the current season.
+- Maps each team to its conference and selects the top 2 teams per conference by predicted probability as the projected Conference Finalists.
+- Saves predictions and walk-forward results to `data/results/`.
 
 # Future Improvements
 
-- XGBoost or gradient boosting to extract more signal from the current feature set
 - Late-season momentum metrics
 
 
