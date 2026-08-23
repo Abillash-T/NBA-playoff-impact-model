@@ -37,9 +37,9 @@ Final models are refit on all historical seasons (2015-16 through 2024-25) and u
 
 
 # Dashboard
-Interactive dashboard visualizing model predictions, LOSO validation results, and feature importances.
+Interactive dashboard visualizing model predictions, Walk-forward validation results, and feature importances.
 
-- [View on Tableau Public](https://public.tableau.com/views/NBAPlayoffPredictionModel/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
+- [View on Tableau Public](https://public.tableau.com/app/profile/abillash.thampiyah/viz/nba_playoff_dashboard/Dashboard1?publish=yes)
 - Download `dashboard/nba_playoff_dashboard.twbx` to open locally in Tableau
 
 # Project Structure:
