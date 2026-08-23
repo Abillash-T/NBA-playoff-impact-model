@@ -4,12 +4,8 @@ A season-aware machine learning model that predicts which NBA teams are likely t
 
 # Project Objective
 
-To estimate the probability that a team will make a deep playoff run (Conference Finals or beyond) based on regular-season efficiency metrics and top player performance.
+To estimate the probability that a team will make at least make the conference finals based on regular-season efficiency metrics and top player performance.
 
-A deep playoff run is defined as reaching:
-- Conference Finals
-- NBA Finals
-- NBA Champion
 
 # Feature Selection
 
