@@ -1,4 +1,4 @@
-# NBA-playoff-impact-model
+# NBA Playoff Forecasting Model
 
 A season-aware machine learning model that predicts which NBA teams are likely to reach the Conference Finals using engineered efficiency metrics and star player impact from the 2015–16 through 2024–25 seasons.
 
