@@ -27,7 +27,7 @@ Two candidate models are trained and compared:
 - **Logistic Regression**: standardized features with L2 regularization and balanced class weights.
 - **Random Forest**: hyperparameters (`n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`) tuned via `RandomizedSearchCV` with 5-fold cross-validation, scored on ROC-AUC.
 
-Both models are evaluated using walk-forward validation: starting from a minimum training window of 5 seasons, each model is trained only on prior seasons and tested on the following season, then the window expands by one season and the process repeats. This mimics how the model is actually used, forecasting a season it has not seen any outcomes from.
+Both models are evaluated using walk-forward validation: starting from a minimum training window of 3 seasons, each model is trained only on prior seasons and tested on the following season, then the window expands by one season and the process repeats. This mimics how the model is actually used, forecasting a season it has not seen any outcomes from.
 
 Final models are refit on all historical seasons (2015-16 through 2024-25) and used to forecast the current season. Teams are grouped by conference, and the two highest predicted probabilities per conference are selected as the model's projected Conference Finalists.
 
@@ -104,9 +104,26 @@ Trains, validates, and evaluates both models, then generates Conference Finals f
 - Maps each team to its conference and selects the top 2 teams per conference by predicted probability as the projected Conference Finalists.
 - Saves predictions and walk-forward results to `data/results/`.
 
+
+# Conclusions
+
+The results indicate that regular-season team efficiency and top-player impact contain meaningful information about a team's likelihood of reaching the Conference Finals or beyond.
+
+Random Forest achieved the highest mean walk-forward ROC-AUC of **0.845**, slightly outperforming Logistic Regression at **0.839**. However, Logistic Regression performed better on the chronological 80/20 historical holdout, achieving a ROC-AUC of **0.820** compared with **0.777** for Random Forest.
+
+The difference between the two evaluation methods highlights the importance of season-aware validation when forecasting across NBA seasons. While the Random Forest captured slightly more signal across the expanding walk-forward windows, the stronger holdout performance of Logistic Regression suggests that a simpler model may generalize better to later seasons.
+
+The final models provide probability-based rankings rather than deterministic playoff predictions. These probabilities can be used to identify teams with stronger estimated chances of making a deep playoff run while accounting for uncertainty in the prediction.
+
 # Future Improvements
 
-- Late-season momentum metrics
+- Incorporate player availability and injury information to account for changes in team strength entering the playoffs.
+- Add late-season and post-All-Star-Break performance metrics to capture current team form.
+- Include multiple top-player metrics rather than only the highest-PIE player to better capture roster depth.
+- Explore conference-specific models or conference-adjusted features to account for differences between the Eastern and Western Conference.
+- Evaluate probability calibration to determine whether predicted probabilities accurately reflect observed outcomes.
+- Investigate interactions between team-level efficiency and top-player impact.
+- Incorporate potential playoff matchups and opponent strength into playoff probability estimates.
 
 
 
